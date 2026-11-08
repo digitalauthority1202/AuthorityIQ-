@@ -58,6 +58,9 @@ Definitions:
 - Cash after founder = collections ex-GST less direct delivery, CAC, overhead, payment fees ex-GST and founder withdrawals. Show GST cash separately.
 
 ## Integration
+- n8n posts validated, idempotent batches to `POST /api/finance/sync` using the `x-dal-finance-sync-secret` header. Configure `DAL_FINANCE_SYNC_SECRET` as a server-only environment variable; never place it in browser code.
+- Sync payload is scoped to a workspace and supports leads, deals, retainers, invoices, payments, costs and founder draw records. Stable external IDs are used for upserts.
+- Each sync attempt is recorded in `dal_finance_sync_runs`; the dashboard displays last successful sync, status and errors.
 - HubSpot is CRM source of truth.
 - Use n8n scheduled sync to fetch contacts, deals, custom retainer fields and upsert by stable HubSpot object IDs.
 - Use PayU settlement exports/API and accounting data for payments, refunds, fee and GST.
@@ -73,6 +76,7 @@ The companion file `supabase/finance_dashboard_schema.sql` defines the finance s
 2. HubSpot connection is not yet confirmed. A ChatGPT HubSpot connection is not itself the same as an AuthorityIQ/n8n server integration.
 3. No PayU settlement or accounting data feed is configured.
 4. Runtime environment variables and deployment target must be verified before claiming the page is live.
+5. Configure `DAL_FINANCE_SYNC_SECRET` and create the n8n workflow; the sync endpoint is code-only until those secrets and the workflow exist.
 
 ## Acceptance tests
 - Unauthenticated user gets 401.
