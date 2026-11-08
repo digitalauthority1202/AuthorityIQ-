@@ -58,7 +58,7 @@ export async function GET(request: Request) {
     const nextMonth = isoDate(addMonths(selectedMonth, 1));
     const monthEnd = isoDate(endOfMonth(selectedMonth));
 
-    const [settingsResult, leadsResult, dealsResult, invoicesResult, paymentsResult, retainersResult, costsResult, drawsResult] = await Promise.all([
+    const [settingsResult, leadsResult, dealsResult, invoicesResult, paymentsResult, retainersResult, costsResult, drawsResult, syncResult] = await Promise.all([
       admin.from('dal_finance_settings').select('*').eq('workspace_id', workspaceId).maybeSingle(),
       admin.from('dal_finance_leads').select('created_at,is_excluded').eq('workspace_id', workspaceId).gte('created_at', start).lt('created_at', nextMonth),
       admin.from('dal_finance_deals').select('deal_type,deal_stage,amount_ex_gst,close_date,is_new_client').eq('workspace_id', workspaceId).gte('close_date', start).lt('close_date', nextMonth),
@@ -67,9 +67,10 @@ export async function GET(request: Request) {
       admin.from('dal_finance_retainers').select('start_date,end_date,monthly_fee_ex_gst,status').eq('workspace_id', workspaceId),
       admin.from('dal_finance_costs').select('cost_date,category,amount_ex_gst,input_gst,eligible_for_itc').eq('workspace_id', workspaceId).gte('cost_date', start).lt('cost_date', nextMonth),
       admin.from('dal_founder_draws').select('paid_at,amount').eq('workspace_id', workspaceId).gte('paid_at', start).lt('paid_at', nextMonth),
+      admin.from('dal_finance_sync_runs').select('status,completed_at,row_counts,error_summary').eq('workspace_id', workspaceId).order('started_at', { ascending: false }).limit(1).maybeSingle(),
     ]);
 
-    const results = [settingsResult, leadsResult, dealsResult, invoicesResult, paymentsResult, retainersResult, costsResult, drawsResult];
+    const results = [settingsResult, leadsResult, dealsResult, invoicesResult, paymentsResult, retainersResult, costsResult, drawsResult, syncResult];
     const failed = results.find((result) => result.error);
     if (failed?.error) throw failed.error;
 
@@ -175,7 +176,7 @@ export async function GET(request: Request) {
       forecastTrend: forecast,
       settings,
       variance,
-      syncStatus: { source: 'DAL finance ledger', refreshedAt: new Date().toISOString(), mode: 'database-backed' },
+      syncStatus: { source: 'DAL finance ledger', refreshedAt: syncResult.data?.completed_at ?? null, status: syncResult.data?.status ?? 'never_synced', rowCounts: syncResult.data?.row_counts ?? {}, errorSummary: syncResult.data?.error_summary ?? null, mode: 'database-backed' },
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'FINANCE_DASHBOARD_FAILED';
