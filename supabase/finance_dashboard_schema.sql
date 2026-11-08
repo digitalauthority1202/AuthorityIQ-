@@ -61,6 +61,7 @@ create table if not exists public.dal_finance_retainers (
   id uuid primary key default gen_random_uuid(),
   organization_id uuid not null references public.organizations(id) on delete cascade,
   workspace_id uuid not null references public.workspaces(id) on delete cascade,
+  external_retainer_id text not null,
   hubspot_deal_id text,
   hubspot_company_id text,
   client_name text,
@@ -70,7 +71,8 @@ create table if not exists public.dal_finance_retainers (
   status text not null check (status in ('active','churned','paused')),
   churn_reason text,
   synced_at timestamptz not null default now(),
-  check (end_date is null or end_date >= start_date)
+  check (end_date is null or end_date >= start_date),
+  unique(organization_id, external_retainer_id)
 );
 
 create table if not exists public.dal_finance_invoices (
@@ -138,7 +140,20 @@ create table if not exists public.dal_founder_draws (
   paid_at date not null,
   amount numeric(14,2) not null check (amount >= 0),
   notes text,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  unique(organization_id, external_reference)
+);
+
+create table if not exists public.dal_finance_sync_runs (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  workspace_id uuid not null references public.workspaces(id) on delete cascade,
+  source text not null,
+  status text not null check (status in ('succeeded','failed')),
+  started_at timestamptz not null default now(),
+  completed_at timestamptz,
+  row_counts jsonb not null default '{}'::jsonb,
+  error_summary text
 );
 
 create index if not exists dal_finance_leads_month_idx on public.dal_finance_leads(workspace_id, created_at);
@@ -157,7 +172,7 @@ begin
   foreach t in array array[
     'dal_finance_settings','dal_finance_leads','dal_finance_deals',
     'dal_finance_retainers','dal_finance_invoices','dal_finance_payments',
-    'dal_finance_costs','dal_founder_draws'
+    'dal_finance_costs','dal_founder_draws','dal_finance_sync_runs'
   ] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('revoke all on public.%I from anon, authenticated', t);
