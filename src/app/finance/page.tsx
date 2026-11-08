@@ -17,7 +17,7 @@ type FinancePayload = {
   forecast: { newClients: number; revenueExGst: number; cacSpend: number; deliveryCost: number; retainerRevenueExGst: number; founderDrawTarget: number; cashAfterFounder: number };
   forecastTrend: Array<{ month: string; revenueExGst: number; retainerRevenueExGst: number; cashAfterFounder: number; retainerMrrAtEnd: number }>;
   variance: { signedClients: number; revenueExGst: number; cacSpend: number; deliveryCost: number; retainerMrr: number; founderWithdrawals: number };
-  syncStatus: { source: string; refreshedAt: string; mode: string };
+  syncStatus: { source: string; refreshedAt: string | null; status: string; rowCounts: Record<string, number>; errorSummary: string | null; mode: string };
 };
 
 const money = (value: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(value || 0);
@@ -147,9 +147,10 @@ export default function FinanceDashboardPage() {
           <h2 className="text-lg font-semibold text-slate-950">Finance data health</h2>
           <div className="mt-3 grid gap-3 text-sm sm:grid-cols-3">
             <div><div className="text-slate-500">Source</div><div className="font-medium">{data.syncStatus.source}</div></div>
-            <div><div className="text-slate-500">Last refresh</div><div className="font-medium">{new Date(data.syncStatus.refreshedAt).toLocaleString()}</div></div>
-            <div><div className="text-slate-500">Sync mode</div><div className="font-medium">{data.syncStatus.mode}</div></div>
+            <div><div className="text-slate-500">Last successful sync</div><div className="font-medium">{data.syncStatus.refreshedAt ? new Date(data.syncStatus.refreshedAt).toLocaleString() : 'No successful sync yet'}</div></div>
+            <div><div className="text-slate-500">Sync status</div><div className="font-medium">{data.syncStatus.status.replace('_', ' ')}</div></div>
           </div>
+          {data.syncStatus.errorSummary && <p className="mt-3 text-xs text-red-700">Latest sync error: {data.syncStatus.errorSummary}</p>}
           <p className="mt-4 text-xs text-slate-500">This dashboard is live only after the finance schema is applied and HubSpot, PayU and accounting feeds have populated the ledger. It is a management dashboard, not a substitute for accounting records or GST returns.</p>
         </section>
       </>}
