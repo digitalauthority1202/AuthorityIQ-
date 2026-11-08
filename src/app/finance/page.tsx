@@ -6,6 +6,7 @@ import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 
 type FinancePayload = {
   month: string;
+  settings: { monthly_churn_rate: number };
   actual: {
     leads: number; signedClients: number; engagementBookingsExGst: number; invoiceRevenueExGst: number;
     collectionsExGst: number; grossCashCollected: number; activeRetainerCount: number; activeRetainerMrr: number;
