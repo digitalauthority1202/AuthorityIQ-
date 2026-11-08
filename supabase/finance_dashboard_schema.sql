@@ -106,6 +106,7 @@ create table if not exists public.dal_finance_payments (
   gross_amount numeric(14,2) not null default 0 check (gross_amount >= 0),
   payu_fee_ex_gst numeric(14,2) not null default 0 check (payu_fee_ex_gst >= 0),
   payu_fee_gst numeric(14,2) not null default 0 check (payu_fee_gst >= 0),
+  payu_fee_itc_eligible boolean not null default false,
   payment_source text,
   payment_status text not null default 'settled',
   refund_amount numeric(14,2) not null default 0 check (refund_amount >= 0),
@@ -126,11 +127,10 @@ create table if not exists public.dal_finance_costs (
   eligible_for_itc boolean not null default false,
   client_reference text,
   notes text,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  synced_at timestamptz not null default now(),
+  unique(organization_id, external_cost_id)
 );
-create unique index if not exists dal_finance_cost_external_unique
-  on public.dal_finance_costs(organization_id, external_cost_id)
-  where external_cost_id is not null;
 
 create table if not exists public.dal_founder_draws (
   id uuid primary key default gen_random_uuid(),
@@ -141,6 +141,7 @@ create table if not exists public.dal_founder_draws (
   amount numeric(14,2) not null check (amount >= 0),
   notes text,
   created_at timestamptz not null default now(),
+  synced_at timestamptz not null default now(),
   unique(organization_id, external_reference)
 );
 
@@ -153,7 +154,8 @@ create table if not exists public.dal_finance_sync_runs (
   started_at timestamptz not null default now(),
   completed_at timestamptz,
   row_counts jsonb not null default '{}'::jsonb,
-  error_summary text
+  error_summary text,
+  synced_at timestamptz not null default now()
 );
 
 create index if not exists dal_finance_leads_month_idx on public.dal_finance_leads(workspace_id, created_at);
