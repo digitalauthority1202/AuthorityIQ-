@@ -31,7 +31,7 @@ const invoiceSchema = z.object({
 const paymentSchema = z.object({
   external_payment_id: z.string().min(1), external_invoice_id: z.string().nullable().optional(), hubspot_deal_id: z.string().nullable().optional(),
   paid_at: z.string().datetime({ offset: true }), amount_ex_gst: money, gst_amount: money, gross_amount: money,
-  payu_fee_ex_gst: money.optional(), payu_fee_gst: money.optional(), payment_source: z.string().nullable().optional(),
+  payu_fee_ex_gst: money.optional(), payu_fee_gst: money.optional(), payu_fee_itc_eligible: z.boolean().optional(), payment_source: z.string().nullable().optional(),
   payment_status: z.string().default('settled'), refund_amount: money.optional(),
 });
 const costSchema = z.object({
