@@ -63,7 +63,7 @@ export async function GET(request: Request) {
       admin.from('dal_finance_leads').select('created_at,is_excluded').eq('workspace_id', workspaceId).gte('created_at', start).lt('created_at', nextMonth),
       admin.from('dal_finance_deals').select('deal_type,deal_stage,amount_ex_gst,close_date,is_new_client').eq('workspace_id', workspaceId).gte('close_date', start).lt('close_date', nextMonth),
       admin.from('dal_finance_invoices').select('invoice_date,amount_ex_gst,gst_amount,gross_amount,invoice_status').eq('workspace_id', workspaceId).gte('invoice_date', start).lt('invoice_date', nextMonth),
-      admin.from('dal_finance_payments').select('paid_at,amount_ex_gst,gst_amount,gross_amount,payu_fee_ex_gst,payu_fee_gst,payment_status,refund_amount').eq('workspace_id', workspaceId).gte('paid_at', start).lt('paid_at', nextMonth),
+      admin.from('dal_finance_payments').select('paid_at,amount_ex_gst,gst_amount,gross_amount,payu_fee_ex_gst,payu_fee_gst,payu_fee_itc_eligible,payment_status,refund_amount').eq('workspace_id', workspaceId).gte('paid_at', start).lt('paid_at', nextMonth),
       admin.from('dal_finance_retainers').select('start_date,end_date,monthly_fee_ex_gst,status').eq('workspace_id', workspaceId),
       admin.from('dal_finance_costs').select('cost_date,category,amount_ex_gst,input_gst,eligible_for_itc').eq('workspace_id', workspaceId).gte('cost_date', start).lt('cost_date', nextMonth),
       admin.from('dal_founder_draws').select('paid_at,amount').eq('workspace_id', workspaceId).gte('paid_at', start).lt('paid_at', nextMonth),
@@ -94,9 +94,10 @@ export async function GET(request: Request) {
     const cacSpend = costs.filter((cost) => cost.category === 'cac').reduce((n, cost) => n + Number(cost.amount_ex_gst ?? 0), 0);
     const deliveryCost = costs.filter((cost) => cost.category === 'delivery').reduce((n, cost) => n + Number(cost.amount_ex_gst ?? 0), 0);
     const overhead = costs.filter((cost) => cost.category === 'overhead').reduce((n, cost) => n + Number(cost.amount_ex_gst ?? 0), 0);
+    const otherCosts = costs.filter((cost) => cost.category === 'other').reduce((n, cost) => n + Number(cost.amount_ex_gst ?? 0), 0);
     const outputGst = sum(validInvoices, 'gst_amount');
     const eligibleInputGst = costs.filter((cost) => cost.eligible_for_itc).reduce((n, cost) => n + Number(cost.input_gst ?? 0), 0)
-      + sum(settledPayments, 'payu_fee_gst');
+      + sum(settledPayments.filter((payment) => payment.payu_fee_itc_eligible), 'payu_fee_gst');
     const founderWithdrawals = sum(draws, 'amount');
     const invoiceRevenue = sum(validInvoices, 'amount_ex_gst');
     const collectedExGst = sum(settledPayments, 'amount_ex_gst');
@@ -125,7 +126,8 @@ export async function GET(request: Request) {
       gstReserveEstimate: Math.max(0, outputGst - eligibleInputGst),
       founderWithdrawals,
       overhead,
-      cashAfterFounderProxy: collectedExGst - deliveryCost - cacSpend - overhead - payuFees - founderWithdrawals,
+      otherCosts,
+      cashAfterFounderProxy: collectedExGst - deliveryCost - cacSpend - overhead - otherCosts - payuFees - founderWithdrawals,
     };
 
     let projectedActive = openingRetainers.length;
